@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Gastos por Data</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div class="flex flex-col items-center ">
+        <div class="bg-white rounded-lg p-6 w-full text-center max-w-lg mb-8">
+            <div class="flex justify-center items-center space-x-4">
+                <img src="icon.png" alt="Ícone" height="100px" width="100px">
+                <h1 class="text-2xl font-bold">MoneyLog</h1>
+            </div>
+            <textarea id="expenseInput" class="w-full p-2 mb-4 border border-gray-300 rounded-lg h-64" rows="10" placeholder=""></textarea>
+            
+            <h2 class="text-1xl font-bold mb-4">Filtro</h2>
+            <div class="flex space-x-4 mb-8">
+                <div class="w-1/2">
+                    <label for="startDate" class="block text-sm font-medium text-gray-700">Data Início</label>
+                    <input type="date" id="startDate" class="w-full p-2 border border-gray-300 rounded-lg" />
+                </div>
+                <div class="w-1/2">
+                    <label for="endDate" class="block text-sm font-medium text-gray-700">Data Fim</label>
+                    <input type="date" id="endDate" class="w-full p-2 border border-gray-300 rounded-lg" />
+                </div>
+            </div>
+    
+            <div id="result" class="mt-4 text-lg font-bold text-center"></div>
+            <button id="downloadBtn" class="mt-8 border border-black text-black p-2 rounded-lg flex items-center space-x-2 bg-transparent hover:bg-black hover:text-white transition duration-300">
+                <span> ⬇️ Baixar Logs</span>
+            </button>
+        </div>
+    
+        <!-- Artigo "Como Controlar Seus Gastos" -->
+        <div class="bg-white rounded-lg p-6 w-full max-w-lg mt-8">
+            <h2 class="text-xl font-bold">Como controlar seus gastos eficientemente</h2>
+            <p class="mt-4">
+                Controlar os gastos pessoais é essencial para manter uma vida financeira equilibrada. Saber exatamente quanto e onde você está gastando permite identificar excessos, cortar despesas desnecessárias e criar uma estratégia para poupar. Aqui estão algumas dicas para ajudá-lo a controlar suas finanças:
+            </p>
+            <ul class="list-disc ml-6 mt-4">
+                <li><strong>Registre tudo:</strong> Mantenha um registro detalhado de todas as suas receitas e despesas. Use ferramentas como o <em>MoneyLog</em> para visualizar facilmente seus gastos mensais.</li>
+                <li><strong>Defina metas financeiras:</strong> Estabeleça metas claras para o que você deseja alcançar financeiramente, como poupar para uma emergência ou investir em algo a longo prazo.</li>
+                <li><strong>Priorize as despesas essenciais:</strong> Dê prioridade às despesas necessárias, como alimentação, moradia e transporte, e tente reduzir gastos com itens supérfluos.</li>
+                <li><strong>Revise seus gastos regularmente:</strong> Faça uma revisão semanal ou mensal dos seus gastos para garantir que está seguindo seu planejamento financeiro.</li>
+                <li><strong>Crie um orçamento:</strong> Planeje um orçamento realista com base em sua renda e despesas, e siga-o rigorosamente.</li>
+                <li><strong>Evite dívidas:</strong> Evite fazer dívidas desnecessárias e, se tiver, crie um plano de pagamento eficiente para quitá-las o quanto antes.</li>
+            </ul>
+            <p class="mt-4">
+                O uso de uma ferramenta como o <em>MoneyLog</em> ajuda a simplificar o processo de registro e análise de seus gastos, permitindo que você controle sua vida financeira de maneira eficiente e automática.
+            </p>
+        </div>
+    
+    </div>
+   
+    <script>
+
+        document.getElementById('expenseInput').placeholder = "Digite seus lançamentos no formato, examplo: \n\n30-09-2024 Salário 4800\n30-09-2024 Cartão de crédito Itau -2171,71";
+
+        // Função para formatar a data no padrão AAAA-MM-DD
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Meses de 0 a 11
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Obtém o primeiro e último dia do mês atual
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        // Define os valores padrões para os inputs de data
+        document.getElementById('startDate').value = formatDate(firstDayOfMonth);
+        document.getElementById('endDate').value = formatDate(lastDayOfMonth);
+
+        // Função para salvar os dados no localStorage
+        function saveToLocalStorage(expenses) {
+            localStorage.setItem('expenses', expenses); // Salva os gastos
+        }
+
+        // Função para restaurar os dados do localStorage
+        function loadFromLocalStorage() {
+            const savedExpenses = localStorage.getItem('expenses');
+
+            if (savedExpenses) {
+                document.getElementById('expenseInput').value = savedExpenses;
+                scrollToLastEntry(); // Rola para o último lançamento
+            }
+
+            calculateTotal(); // Recalcular ao carregar
+        }
+
+        // Função para calcular o total dos lançamentos por intervalo de datas
+        function calculateTotal() {
+            const input = document.getElementById('expenseInput').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const lines = input.split('\n');
+            let total = 0;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (line === '') return; // Ignora linhas vazias
+
+                const parts = line.split(' ');
+                const datePart = parts[0]; // Data no formato DD-MM-AAAA
+                const value = parseFloat(parts[parts.length - 1].replace(',', '.'));
+
+                // Verifica se a dataPart está no formato correto antes de usar formatDate
+                if (datePart.includes('-')) {
+                    const formattedDate = formatToYYYYMMDD(datePart);
+                    if (!isNaN(value) && isDateInRange(formattedDate, startDate, endDate)) {
+                        total += value;
+                    }
+                }
+            });
+
+            displayTotal(total);
+
+            // Salva os dados no localStorage após o cálculo
+            saveToLocalStorage(input);
+        }
+
+        // Função para verificar se a data está no intervalo
+        function isDateInRange(date, startDate, endDate) {
+            if (!startDate && !endDate) return true; // Sem filtro de data, mostra tudo
+            if (startDate && date < startDate) return false;
+            if (endDate && date > endDate) return false;
+            return true;
+        }
+
+        // Função para exibir o total
+        function displayTotal(total) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = ''; // Limpa o resultado anterior
+            const totalFormatted = `Total: R$ ${total.toFixed(2)}`;
+            const paragraph = document.createElement('p');
+            paragraph.innerText = totalFormatted;
+            resultDiv.appendChild(paragraph);
+        }
+
+        // Função para formatar a data do formato DD-MM-AAAA para AAAA-MM-DD (padrão do input date)
+        function formatToYYYYMMDD(dateString) {
+            const [day, month, year] = dateString.split('-');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Função para rolar o textarea até o último lançamento
+        function scrollToLastEntry() {
+            const textarea = document.getElementById('expenseInput');
+            textarea.scrollTop = textarea.scrollHeight;
+        }
+
+        // Atualiza o cálculo e o storage sempre que o texto no textarea mudar
+        document.getElementById('expenseInput').addEventListener('input', calculateTotal);
+
+        // Recalcula o total quando as datas de filtro são alteradas
+        document.getElementById('startDate').addEventListener('change', calculateTotal);
+        document.getElementById('endDate').addEventListener('change', calculateTotal);
+
+        // Carregar os dados salvos ao carregar a página
+        window.onload = loadFromLocalStorage;
+
+            function downloadLogs() {
+            const expenseText = document.getElementById('expenseInput').value;
+            const blob = new Blob([expenseText], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'logs.txt';
+            link.click();
+        }
+
+        // Adiciona o evento de clique ao botão de download
+        document.getElementById('downloadBtn').addEventListener('click', downloadLogs);
+        </script>
+</body>
+</html>
